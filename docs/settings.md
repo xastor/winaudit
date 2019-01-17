@@ -1,16 +1,11 @@
 # WinAudit Settings
 
 Winsw uses 2 settings files : 
-1. A local file : winsw.ini (required)
+1. A local file : Service.ini (required)
 2. A remote URL (optional)
 
-Settings are used for 2 things : 
-* Define operational parameters for the service
-* Define what information to capture
-
-Remote settings override local settings.
-
-Local and remote settings are loaded (from disk or downloaded) every time before collecting information.
+Remote settings override local settings.  
+Local and remote settings are reloaded each time before collecting information.
 
 Service settings : 
 * `settingsurl` : URL for the remote settings file (optional).
@@ -18,14 +13,14 @@ Service settings :
 * `postdelay` : The number of minutes the  between processing steps (the sleep time). You can use '-' to specify random value within some range.
 * `updateurl` : The url to an updated version of the service executable.  This is used when self-updating the service using the 'update' [command](commands.md).
 
-Other settings are used to define captured information:
+Capture settings : 
 * `wmic_*` : Define WMIC data to be captured and returned.
 * `reg_*` : Define a registry field to be captured and returned.
 * `extra_*` : Define a static field to be returned (not captured).
 
 # WMIC
 
-Winaudit supports capturing information from WMIC, the Windows Management Instrumentation Console.
+WinAudit supports capturing information from WMIC, the Windows Management Instrumentation Console.
 
 Settings starting with the prefix "wmic_<alias>" are collected using WMIC and are queries of a specific alias.  A comma-separated list of fields to return is required.
 
@@ -50,15 +45,15 @@ This will result in the following information being captured :
 }
 ```
 
-Here's a quick list of interesting aliases for inspiration : [[https://blogs.technet.microsoft.com/askperf/2012/02/17/useful-wmic-queries]]
+Here's a quick list of interesting aliases for inspiration : https://blogs.technet.microsoft.com/askperf/2012/02/17/useful-wmic-queries
 
 # Registry
 
 Winaudit supports capturing information from the windows registry.
 
-Configurations starting with the prefix "reg_" can be used to collect information from the windows registry.
+Configurations starting with the prefix `reg_` can be used to collect information from the windows registry.
 
-The value of the setting defines the registry key.  This will return the default value for that key.  You can add ',' and a node name to retrieve a specific node value.
+The value of the setting defines the registry key.  This will return the default value for that key.  You can add `,` and a node name to retrieve a specific node value.
 
 For example : 
 
@@ -76,7 +71,7 @@ This will result in the following information being captured :
 
 # Extra
 
-Configurations starting with "extra_" can be used to push static data as collected information.
+Configurations starting with `extra_` can be used to push static data as collected information.
 
 For example : 
 

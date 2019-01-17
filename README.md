@@ -1,6 +1,6 @@
-# WinAudit : a Windows Auditing Daemon
+# WinAudit : A Simple Windows Auditing Daemon
 
-WinAudit is a small service that collects information on a Windows machine and pushes it to some remote server, on a regular basis. 
+WinAudit is a simple service that collects information on a Windows machine and pushes it to some remote server, on a regular basis. 
 
 It is written using the [Haxe](https://haxe.org) language.
 

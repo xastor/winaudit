@@ -3,8 +3,8 @@
 After capturing information and sending in to the server, the server's response may contain some commands for the service to execute. 
 
 Commands should be returned by the service using a json array.  Each command can have : 
-* A 'name' property defining the name of the command.
-* A 'data' property defining extra configuration data.
+* A `name` property defining the name of the command.
+* A `data` property defining extra configuration data.
 
 ```json
 [
@@ -164,9 +164,9 @@ Remove a startup task (see add startup task).
 
 Triggers a service update. 
 
-The 'updateurl' [setting](settings.md) is used to define the URL to an updated executable.
+The `updateurl` [setting](settings.md) is used to define the URL to an updated executable.
 
-Also see [https://github.com/kohsuke/winsw/blob/master/doc/selfRestartingService.md].
+Also see https://github.com/kohsuke/winsw/blob/master/doc/selfRestartingService.md.
 
 
 ```json

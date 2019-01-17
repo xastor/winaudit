@@ -1,8 +1,6 @@
 # WinAudit Service 
 
-The service is implemented as a process that runs in and endless loop. 
-
-The main phases of that loop are described below.
+The service is implemented to run the same cycle in an infinite loop.
 
 ## 1. Capturing information
 
@@ -57,7 +55,7 @@ For example the following can be returned to reboot the computer :
 ]
 ```
 
-## 4. Sleeping
+## 4. Sleep
 
 The service then sleeps.  Sleep duration is 10 minutes by default but can be customized using the `postdelay` [setting](settings.md).
 

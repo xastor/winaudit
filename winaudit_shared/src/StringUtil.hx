@@ -7,7 +7,6 @@ package;
  */
 class StringUtil
 {
-
 	public static function cleanAndTrimList(list:Array<String>):Array<String>
 	{
 		var newlist:Array<String> = new Array();
@@ -27,5 +26,15 @@ class StringUtil
 		serial = StringTools.replace(serial,String.fromCharCode(13),"");
 		return serial;
 	}
-	
+
+	/**
+	 * Replaces metadata tags in a string.
+	 */
+	public static function replaceMeta(text:String):String
+	{
+		if (text == null) return null;
+		var servicepath = Sys.programPath();
+		servicepath = servicepath.substr(0, servicepath.lastIndexOf("\\"));
+		return StringTools.replace(text,"<servicepath>",servicepath);
+	}	
 }

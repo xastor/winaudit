@@ -1,4 +1,4 @@
-# WinAudit : A Simple Windows Auditing Daemon
+# WinAudit : A Simple Windows Reporting Daemon
 
 WinAudit is a simple service that collects information on a Windows machine and pushes it to some remote server, on a regular basis. 
 
@@ -12,15 +12,22 @@ It is written using the [Haxe](https://haxe.org) language.
 * Install [Haxe](https://haxe.org) 3.4 or higher 
 * Install hxcpp by running `haxelib install hxcpp`
 * Install HaxeDevelop
-* Open the project file `winaudit.hxproj` and build.
+* Open the project file `winaudit_service/project.hxproj` and build.
+* Open the project file `winaudit_userhelper/project.hxproj` and build.
 
 ## Running as a service
 
 I recommend running the service using [winsw](https://github.com/kohsuke/winsw).
 
-This service wrapper was used during development, and winaudit has custom support for the winsw self-updating feature.
+* To use : 
+  * Copy the winsw_template folder
+  * Add `winaudit_service/bin/Service.exe`
+  * Add `winaudit_userhelper/bin/UserHelper.exe` 
+  * Add [settings](docs/settings.md) to `Service.ini`
 
-TODO : Add a sample service configuration.
+Install and start/stop using the provided batch scripts.
+
+This service wrapper was used during development, and winaudit has custom support for the winsw self-updating feature.
 
 ## Disclaimer
 

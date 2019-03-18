@@ -1,7 +1,6 @@
 package;
 
 import haxe.crypto.Md5;
-import haxe.ds.HashMap;
 import haxe.Http;
 import haxe.io.Bytes;
 import haxe.Json;
@@ -17,7 +16,7 @@ import cpp.link.StaticZlib;
  * 
  * @author Pieter Bonne <xastor@gmail.com>
  */
-class Service
+class Service implements I_ServiceUpdater
 {
 	/** The service settings map. */
 	var settings:Map<String,String>;
@@ -25,13 +24,6 @@ class Service
 	var info:Map<String,Dynamic>;
 	/** The capture error flag. */
 	var error:Bool;
-	
-	/** The registry node for startup tasks. */
-	static inline var STARTUP_NODE = "HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-	/** The file where saved startup tasks are stored so they can be checked for completion or restarted. */
-	static inline var SAVED_COMMANDS = "<servicepath>/savedcommands.ini";
-	
-	var Version = "2019.01.11";
 	
 	/** 
 	 * The application entrypoint.
@@ -46,11 +38,13 @@ class Service
 	 */
 	public function new()
 	{
-		processStartupTasks();
+		StartupTask.processStartupTasks();
 		
 		while (true)
 		{
 			trace("Time: " + Date.now().toString());
+			
+			this.setupUserHelper();
 
 			do
 			{
@@ -63,7 +57,7 @@ class Service
 				captureInfo();
 				trace("Info: "+ Json.stringify(this.info));
 				
-				processStartupTasks();
+				StartupTask.processStartupTasks();
 				trace("Checked saved commands.");
 				
 				sendInfo();
@@ -107,6 +101,16 @@ class Service
 			Sys.sleep(sleep*60);
 		}
 	}
+	
+	/**
+	 * Check if the userhelper is registered as a startup task.
+	 */
+	function setupUserHelper()
+	{
+		var cmd = new Command("removestartuptask",{"id":"winaudit_userhelper"});
+		var cmd = new Command("addstartuptask",{"id":"winaudit_userhelper", "task":'"<servicepath>\\nircmd.exe" exec hide "<servicepath>\\UserHelper.exe"'});
+		CommandUtil.runCommands([cmd], this);
+	}
 
 	/**
 	 * Load the local settings ini file.
@@ -138,7 +142,7 @@ class Service
 			var url = this.settings["settingsurl"];
 			if (url == null) return; // return if not defined, remote settings are optional.
 			if (url != null) trace("Loading remote settings...");
-			var data = this.doHttpGet(url);
+			var data = CommandUtil.doHttpGet(url);
 			if (data != null)
 			{
 				var props:Map<String,String> = parseProperties(data);
@@ -196,7 +200,7 @@ class Service
 			}
 		}
 		
-		this.info["version"] = Version;
+		this.info["version"] = Constants.Version;
 		
 		captureUptime();
 		captureTeamViewerClientID();
@@ -216,7 +220,7 @@ class Service
 	function sendInfo()
 	{
 		var url = this.settings["posturl"];
-		trace("Sending info to $url...");
+		trace('Sending info to $url...');
 		trace("Info: " + Json.stringify(this.info));
 		if (url == null)
 		{
@@ -288,322 +292,13 @@ class Service
 	 */
 	function runCommands(list:Array<Command>):Void
 	{
-		for (command in list)
-		{	
-			switch(command.name)
-			{
-				case "shutdown":
-					trace("Command: shutdown");
-					CommandlineUtil.getOutput("shutdown", ["-s","-t","60"]);
-					
-				case "reboot":
-					trace("Command: reboot");
-					CommandlineUtil.getOutput("shutdown", ["-r","-t","60"]);
-					
-				case "update":
-					trace("Command: update");
-					this.update();
-					
-				case "execute":
-					trace("Command: execute '"+command.data.command+"'");
-					trace("Arguments: " + command.data.arguments);
-					var output = CommandlineUtil.getOutput(command.data.command, command.data.arguments);
-					trace("Output: " + output);
-					
-				case "download":
-					trace("Command: download");
-					var url = command.data.url;
-					var filename = replaceMeta(command.data.filename);
-					var force = false;
-					if (Reflect.hasField(command.data, "force"))
-						force = cast command.data.force;
-					trace("Url: " + url);
-					trace("Filename: " + filename);
-					trace("Force: " + force);
-					var target = filename;
-					if (force==false && FileSystem.exists(target))
-					{
-						trace("Skipped download, file already exists.");
-					}
-					else
-					{
-						var data = this.doHttpGet(url);
-						if (data != null)
-						{
-							try
-							{
-								var bytes = Bytes.ofString(data);
-								File.saveBytes(target, bytes);
-							}
-							catch (error:Dynamic)
-							{
-								trace("Error saving download: " + error);
-							}
-						}
-					}
-					
-				case "setreg":
-					trace("Command: setreg");
-					var type = RegistryUtil.sanitizeType(command.data.type);
-					trace("Node: " + command.data.node);
-					trace("Key name: " + command.data.key);
-					trace("Key value: " + command.data.value);
-					trace("Key type: " + type);
-					RegistryUtil.writeKey(command.data.node, command.data.key, replaceMeta(command.data.value), type);
-
-				case "delreg":
-					trace("Command: delreg");
-					trace("Node: " + command.data.node);
-					trace("Key name: " + command.data.key);
-					RegistryUtil.deleteKey(command.data.node, command.data.key);
-
-				case "delete":
-					trace("Command: delete");
-					var filename = replaceMeta(command.data.filename);
-					trace("Filename: " + filename);
-					if (FileSystem.exists(filename))
-						FileSystem.deleteFile(filename);
-					
-				case "addstartuptask":
-					trace("Command: addstartuptask");
-					var id:String = command.data.id;
-					var download_url:String = command.data.download_url;
-					var download_filename:String = replaceMeta(command.data.download_filename);
-					var task:String = replaceMeta(command.data.task);
-					var completedFile:String = replaceMeta(command.data.completedFile);
-					trace("Id: " + id);
-					trace("download_url: " + download_url);
-					trace("download_filename: " + download_filename);
-					trace("Task: " + task);
-					trace("CompletedFile: " + completedFile);
-					
-					saveStartup(command);
-					resetStartup(id);
-					
-				case "resetstartuptask":
-					trace("Command: resetstartuptask");
-					var id:String = command.data.id;
-					trace("Id: " + id);
-					
-					resetStartup(id);
-					
-				case "removestartuptask":
-					trace("Command: deletestartuptask");
-					var id:String = command.data.id;
-					trace("Id: " + id);
-					
-					deleteStartup(id);
-					
-				default:
-					trace("unkown command '"+ command.name +"'");
-			}
-		}
-	}
-	
-	/**	
-	 * Create (end enable) a startup task.
-	 *  - Adds a startup task to the local file with startup tasks.
-	 *  - Downloads the task executable.
-	 */
-	function saveStartup(command:Dynamic)
-	{
-		var startupTaskFile = replaceMeta(SAVED_COMMANDS);
-		var tasks:Array<Dynamic> = null;
-		if (FileSystem.exists(startupTaskFile) == false)
-		{
-			tasks = new Array<Dynamic>();
-		}
-		else 
-		{
-			tasks = loadJSON(startupTaskFile);	
-		}
-		var found:Bool = false;
-		for (i in 0...tasks.length)
-		{
-			if (tasks[i].id == command.id)
-			{
-				found = true;
-				tasks[i] = command;
-			}
-		}
-		if (found == false)
-		{
-			tasks.push(command);
-		}
-		saveJSON(startupTaskFile, tasks);
-		// Get info
-		var id:String = command.data.id;
-		var download_url:String = command.data.download_url;
-		var download_filename:String = replaceMeta(command.data.download_filename);
-		var task:String = replaceMeta(command.data.task);
-		var completedFile:String = replaceMeta(command.data.completedFile);
-		// Download task file
-		var commands:Array<Command> = new Array();
-		commands.push(new Command("download", { "url":download_url, "filename":download_filename, "force":true } ));
-		// Reset (add to registry, remove "completed" file).
-		runCommands(commands);
-	}
-	
-	/**
-	 * Resets (and enables) a startup task.
-	 *  - Marks a startup task as not completed.
-	 *  - Removes the task completion file.
-	 *  - Adds the task to the registry.
-	 */
-	function resetStartup(id:String)
-	{
-		var startupTaskFile = replaceMeta(SAVED_COMMANDS);
-		var tasks:Array<Dynamic> = null;
-		if (FileSystem.exists(startupTaskFile) == false)
-		{
-			tasks = new Array<Dynamic>();
-		}
-		else 
-		{
-			tasks = loadJSON(startupTaskFile);	
-		}
-		var command:Dynamic = null;
-		for (task in tasks)
-		{
-			if (task.name=="addstartuptask" && task.data.id == id)
-			{
-				command = task;
-				break;
-			}
-		}
-		if (command == null) 
-		{
-			trace("Command '" + id +"' not found in list.");
-			return;
-		}
-		// Remove "completed"
-		Reflect.deleteField(command, "completed");
-		saveJSON(startupTaskFile, tasks);
-		// Get info
-		var task:String = replaceMeta(command.data.task);
-		var completedFile:String = replaceMeta(command.data.completedFile);
-		// Add startup task
-		var commands:Array<Command> = new Array();
-		commands.push(new Command("delete",
-			{
-				"filename":completedFile
-			}));
-		commands.push(new Command("setreg",
-			{
-				"node":STARTUP_NODE, 
-				"key":"winaudit_startup_"+id,
-				"value":task 
-			}));
-		runCommands(commands);
-	}
-		
-	/**
-	 * Removes a startup task from the system entirely.
-	 * - Deletes a startup task from the local file
-	 * - Removes the task from the registry
-	 * - Deletes the task and completion file.
-	 */
-	function deleteStartup(id)
-	{
-		var startupTaskFile = replaceMeta(SAVED_COMMANDS);
-		if (FileSystem.exists(startupTaskFile) == false) return;
-		var tasks:Array<Dynamic> = this.loadJSON(startupTaskFile);
-		var command:Dynamic = null;
-		for (task in tasks)
-		{
-			if (task.name=="addstartuptask" && task.data.id == id)
-			{
-				command = task;
-				break;
-			}
-		}
-		if (command != null)
-		{
-			// Remove task 
-			tasks.remove(command);
-			saveJSON(startupTaskFile, tasks);
-			// Get info
-			var download_url:String = command.data.download_url;
-			var download_filename:String = replaceMeta(command.data.download_filename);
-			var task:String = replaceMeta(command.data.task);
-			var completedFile:String = replaceMeta(command.data.completedFile);
-			// Remove files
-			var commands:Array<Command> = new Array();
-			commands.push(new Command("delete",{ "filename":download_filename }));
-			commands.push(new Command("delete", { "filename":completedFile } ));
-			// Remove startup task
-			commands.push(new Command("delreg", { "node":STARTUP_NODE, "key":"winaudit_startup_" + id } ));
-			runCommands(commands);
-		}
-		else
-		{
-			trace("Startup task '" + id +"' not found in list.");
-		}
-	}
-	
-	/**
-	 * Loads a json document from a file.
-	 */
-	function loadJSON(file:String):Array<Dynamic>
-	{
-		return cast Json.parse(File.getContent(file));
-	}
-	
-	/**
-	 * Saves data as json to a file.
-	 */
-	function saveJSON(file:String, data:Array<Dynamic>):Void
-	{
-		File.saveContent(file, Json.stringify(data));
-	}
-	
-	/**
-	 * Process the startup tasks.
-	 * For tasks that are not yet completed, it looks for the completedFile file.
-	 * It found, the startup task is removed from registry, preventing it from starting at user login.
-	 */
-	function processStartupTasks()
-	{
-		var startupTaskFile = replaceMeta(SAVED_COMMANDS);
-
-		if (FileSystem.exists(startupTaskFile) == false) return;	
-		var commands:Array<Dynamic> = loadJSON(startupTaskFile);
-		for (command in commands)
-		{
-			var id = command.data.id;
-			if (Reflect.hasField(command,"completed") == false)
-			{
-				var completedFile:String = replaceMeta(command.data.completedFile);
-				var task:String = replaceMeta(command.data.task);
-				if (FileSystem.exists(completedFile))
-				{
-					/* Mark as completed. */
-					trace("Startup task '" + id +"' was completed.");
-					command.completed = true;
-					saveJSON(startupTaskFile,commands);
-					/* Remove startup task */
-					var commands:Array<Command> = new Array();
-					commands.push(new Command("delreg", { "node":STARTUP_NODE, "key":"winaudit_startup_" + id } ));
-					runCommands(commands);
-				}
-			}
-		}
-	}
-	
-	/**
-	 * Replaces metadata tags in a string.
-	 */
-	function replaceMeta(text:String):String
-	{
-		var servicepath = Sys.programPath();
-		servicepath = servicepath.substr(0, servicepath.lastIndexOf("\\"));
-		return StringTools.replace(text,"<servicepath>",servicepath);
+		CommandUtil.runCommands(list,this);
 	}
 	
 	/**
 	 * Runs the WinSW service update mechanism.
 	 */
-	function update()
+	public function update()
 	{
 		try
 		{
@@ -618,12 +313,12 @@ class Service
 			var updateFile = Sys.programPath();
 			updateFile = updateFile.substr(0, updateFile.lastIndexOf("\\")) + "\\update.exe";
 			/* Download updatefile */
-			var data = this.doHttpGet(updateUrl);
+			var data = CommandUtil.doHttpGet(updateUrl);
 			if (data!=null)
 			{
 				var bytes = Bytes.ofString(data);
 				File.saveBytes(updateFile, bytes);
-				trace("Update file downloaded : $updateFile");
+				trace('Update file downloaded : $updateFile');
 			}
 			else
 			{
@@ -651,10 +346,10 @@ class Service
 		}
 		catch (error:Dynamic)
 		{
-			trace("Unexpacted error while updating : $error");
+			trace("Unexpacted error while updating : "+ error);
 		}
 	}
-	
+
 	/**
 	 * Captures the system uptime. 
 	 */
@@ -832,31 +527,5 @@ class Service
 			output.add(item + "=" + props.get(item));
 		}
 		File.saveContent(file, output.toString());
-	}
-	
-	/**
-	 * Execute a HTTP Get request.
-	 * @return Returns the response data or null in case the status code was not in the 200 range.
-	 */
-	function doHttpGet(url:String):String
-	{
-		var status:Int = 200;
-		var content:String = null;
-		var http:Http = new Http(url);
-		http.onStatus = function(data) { status = data;  trace("Status: " + data); };
-		http.onError = function(data) { status = 400; trace("Error: " + data); };
-		http.onData = 
-			function(data) 
-			{
-				content = data; 
-			};
-		http.request(false/*post*/);
-		/* No success? */
-		if (status<200 || status>299)
-		{
-			trace("Download of $url failed with status code $status");
-			return null;
-		}
-		return content;
 	}
 }

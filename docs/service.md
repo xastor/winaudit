@@ -2,11 +2,11 @@
 
 The service is implemented to run the same cycle in an infinite loop.
 
-## 1. Capturing information
+## 1. Capture information
 
 The service captures information that is defined in a local and optionally remote [settings](settings.md) file.
 
-## 2. Returning information
+## 2. Send information
 
 After capturing information, a JSON document is send using HTTP POST.  The `posturl` [setting](settings.md) setting defines the URL.
 

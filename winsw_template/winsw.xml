@@ -1,0 +1,13 @@
+<service>
+  <id>winaudit</id>
+  <name>WinAudit Service</name>
+  <description>The winaudit reporting daemon.</description>
+  <executable>%BASE%\Service.exe</executable>
+  <workingdirectory>%BASE%</workingdirectory>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>8</keepFiles>
+  </log>
+  <onfailure action="restart" delay="10 sec">
+  </onfailure>
+</service>

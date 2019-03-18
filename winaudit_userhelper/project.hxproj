@@ -16,23 +16,24 @@
   <!-- Other classes to be compiled into your SWF -->
   <classpaths>
     <class path="src" />
+    <class path="..\winaudit_shared\src" />
   </classpaths>
   <!-- Build options -->
   <build>
     <option directives="" />
     <option flashStrict="False" />
     <option noInlineOnDebug="False" />
-    <option mainClass="Service" />
+    <option mainClass="UserHelper" />
     <option enabledebug="True" />
     <option additional="" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
-    <!-- example: <library name="..." /> -->
+    <library name="tink_core" />
   </haxelib>
   <!-- Class files to compile (other referenced classes will automatically be included) -->
   <compileTargets>
-    <compile path="src\Service.hx" />
+    <compile path="src\UserHelper.hx" />
   </compileTargets>
   <!-- Paths to exclude from the Project Explorer tree -->
   <hiddenPaths>

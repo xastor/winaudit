@@ -20,9 +20,10 @@ class CommandlineUtil
 	 */
 	public static function getOutput( cmd, arguments:Array<String> ) : Array<String>
 	{
+		trace('Executing $cmd $arguments');
 		var p:Process = new Process(cmd, arguments);
-		var exitCode:Int = p.exitCode();
-		trace("Exit code: " + exitCode);
+		//var exitCode:Int = p.exitCode();
+		//trace("Exit code: " + exitCode);
 		var list:Array<String> = new Array();
 		try
 		{

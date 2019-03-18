@@ -66,7 +66,40 @@ Example:
 }
 ```
 
-## Execute a file
+## Execute a command
+
+Lets the service execute a command.
+
+Example: 
+
+```json
+{
+	"name": "execute",
+	"data": {
+		"command": "cmd",
+		"arguments": [
+			"/c start https:\/\/www.apple.com"
+		]
+	}
+}
+```
+
+## Execute a command as a user
+
+Lets the User Helper execute a task as a user.
+The first user that logs in gets to execute the task.  If multiple users are logged in, behaviour is unpredictable.
+
+```json
+{
+	"name": "userexecute",
+	"data": {
+		"command": "cmd",
+		"arguments": [
+			"/c start https:\/\/www.apple.com"
+		]
+	}
+}
+```
 
 ## Set a registry key
 
